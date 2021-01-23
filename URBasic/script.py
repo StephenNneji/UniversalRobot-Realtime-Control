@@ -21,14 +21,17 @@ Except as contained in this notice, the name of "Rope Robotics ApS" shall not be
 in advertising or otherwise to promote the sale, use or other dealings in this Software
 without prior written authorization from "Rope Robotics ApS".
 '''
-import ctypes
+
 __author__ = "Martin Huus Bjerge"
 __copyright__ = "Copyright 2017, Rope Robotics ApS, Denmark"
 __license__ = "MIT License"
 
-import URBasic
-import numpy as np
+import ctypes
 import time
+import numpy as np
+from .connector import RobotConnector
+from .state import DEFAULT_TIMEOUT
+
 
 class UrScript(object):
     '''
@@ -50,25 +53,22 @@ class UrScript(object):
 
 
     Example:
-    rob = URBasic.urScript.UrScript('192.168.56.101', rtde_conf_filename='rtde_configuration.xml')
+    rob = URBasic.script.UrScript('192.168.56.101', rtde_conf_filename='rtde_configuration.xml')
     self.close_rtc()
     '''
-
 
     def __init__(self, host, robotModel, hasForceTorque=False, conf_filename=None):
         '''
         Constructor see class description for more info.
         '''
-        logger = URBasic.dataLogging.DataLogging()
-        name = logger.AddEventLogging(__name__)
-        self.__logger = logger.__dict__[name]
-        self.robotConnector = URBasic.robotConnector.RobotConnector(robotModel, host, hasForceTorque, conf_filename=conf_filename)
-        #time.sleep(200)
-        while(self.robotConnector.RobotModel.ActualTCPPose() is None):      ## check paa om vi er startet
-            print("waiting for everything to be ready")
-            time.sleep(1)
-        self.__logger.info('Init done')
-#############   Module motion   ###############
+        self.robotConnector = RobotConnector(robotModel, host, hasForceTorque, conf_filename=conf_filename)
+
+        t0 = time.time()
+        while (time.time()-t0 < DEFAULT_TIMEOUT) and self.robotConnector.RobotModel.ActualTCPPose() is None:
+            pass
+
+        if self.robotConnector.RobotModel.ActualTCPPose() is None:
+            raise ConnectionError()
 
     def waitRobotIdleOrStopFlag(self):
 
@@ -78,7 +78,6 @@ class UrScript(object):
         if self.robotConnector.RobotModel.rtcProgramExecutionError:
 
             print('Robot program execution error!!!')
-            #raise RuntimeError('Robot program execution error!!!')
 
     def movej(self, q=None, a=1.4, v =1.05, t =0, r =0, wait=True, pose=None):
         '''
@@ -136,7 +135,6 @@ end
         programString = prg.format(**locals())
 
         self.robotConnector.RealTimeClient.SendProgram(programString)
-        #time.sleep(0.5)
         if(wait):
             self.waitRobotIdleOrStopFlag()
 
@@ -1261,17 +1259,9 @@ end
         Return Value
         Sum of position parts and product of rotation parts (pose)
         '''
-        Trans_1 = URBasic.kinematic.Pose2Tran_Mat(p_1)
-        Trans_2 = URBasic.kinematic.Pose2Tran_Mat(p_2)
-        Trans_3 = np.matmul(Trans_1, Trans_2)
-        p_3 = URBasic.kinematic.Tran_Mat2Pose(Trans_3)
-        return p_3
+        raise NotImplementedError('Function Not yet implemented')
 
-
-
-
-
-############    Module interfaces  #################
+    ############    Module interfaces  #################
 
     def get_configurable_digital_in(self, n):
         '''

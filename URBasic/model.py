@@ -25,7 +25,9 @@ __author__ = "Martin Huus Bjerge"
 __copyright__ = "Copyright 2017, Rope Robotics ApS, Denmark"
 __license__ = "MIT License"
 
-import URBasic
+
+from enum import Enum
+
 
 class RobotModel(object):
     '''
@@ -35,17 +37,11 @@ class RobotModel(object):
 
     '''
 
-
     def __init__(self, log_path="ur_log/", log_config_path=None):
         '''
         Constructor see class description for more info.
         '''
-        logger = URBasic.dataLogging.DataLogging(path=log_path, config=log_config_path)
-        name = logger.AddEventLogging(__name__)
-        self.__logger = logger.__dict__[name]
-        self.__logger.info('Init done')
-
-        #Universal Robot Model content
+        # Universal Robot Model content
         self.password = None
         self.ipAddress = None
 
@@ -201,7 +197,6 @@ class RobotModel(object):
 
     def RTDEProtocolVersion(self):raise NotImplementedError('Function Not yet implemented')
     def ActualTCPPose(self):return self.dataDir['actual_TCP_pose']
-    def RobotModee(self):raise NotImplementedError('Function Not yet implemented')
     def SafetyMode(self):raise NotImplementedError('Function Not yet implemented')
     def TargetQ(self):raise NotImplementedError('Function Not yet implemented')
     def TargetQD(self):raise NotImplementedError('Function Not yet implemented')
@@ -271,7 +266,18 @@ class RobotModel(object):
         result.Fault                  =   512&self.dataDir['safety_status_bits']==512
         result.StoppedDueToSafety     =  1024&self.dataDir['safety_status_bits']==1024
         return result
+    
+    def RobotMode(self):
+        '''
+        RobotMode class defined in the bottom of this file
+        '''
 
+        result = self.dataDir['robot_mode']
+        try:
+            return RobotMode(result)
+        except ValueError:
+            return result
+    
     def TcpForceScalar(self): return self.dataDir['tcp_force_scalar']
 
     def OutputBitRegister(self):
@@ -290,11 +296,25 @@ class RobotModel(object):
     def ClearToSend(self):raise NotImplementedError('Function Not yet implemented')
 
 
+class RobotMode(Enum):
+    NoController = -1
+    Disconnected = 0
+    ConfirmSafety = 1
+    Booting = 2
+    PowerOff = 3
+    PowerOn = 4
+    Idle = 5
+    Backdrive = 6
+    Running = 7
+    UpdatingFirmware = 8				
+
+
 class RobotStatusBit(object):
     PowerOn = None
     ProgramRunning = None
     TeachButtonPressed = None
     PowerButtonPressed = None
+
 
 class SafetyStatusBit(object):
     NormalMode = None
